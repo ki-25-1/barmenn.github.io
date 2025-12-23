@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bar Manager - Фонтан v2</title>
+    <title>Bar Manager - Фонтан v3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -11,12 +11,12 @@
         .btn-xl { padding: 15px 20px; font-size: 1.2rem; width: 100%; margin-bottom: 10px; }
         
         /* Таблиця для друку */
-        #reportTable { width: 100%; border-collapse: collapse; background: white; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+        #reportTable { width: 100%; border-collapse: collapse; background: white; font-family: 'Courier New', Courier, monospace; font-size: 14px; color: black; }
         #reportTable th, #reportTable td { border: 2px solid #000; padding: 4px 8px; }
         #reportTable th { text-align: left; background-color: #eee; }
         .print-header { display: none; margin-bottom: 10px; font-weight: bold; }
 
-        /* Стилі друку: ховаємо кнопки видалення і інтерфейс */
+        /* Стилі друку */
         @media print {
             body * { visibility: hidden; }
             #reportSection, #reportSection * { visibility: visible; }
@@ -34,8 +34,8 @@
     <ul class="nav nav-pills mb-3 justify-content-center no-print" id="pills-tab" role="tablist">
         <li class="nav-item"><button class="nav-link active" id="pills-sale-tab" data-bs-toggle="pill" data-bs-target="#pills-sale" type="button">💰 Продаж</button></li>
         <li class="nav-item"><button class="nav-link" id="pills-supply-tab" data-bs-toggle="pill" data-bs-target="#pills-supply" type="button">🚚 Поставка</button></li>
-        <li class="nav-item"><button class="nav-link" id="pills-report-tab" data-bs-toggle="pill" data-bs-target="#pills-report" type="button">📄 Звіт / Видалення</button></li>
-        <li class="nav-item"><button class="nav-link" id="pills-add-tab" data-bs-toggle="pill" data-bs-target="#pills-add" type="button">➕ Новий товар</button></li>
+        <li class="nav-item"><button class="nav-link" id="pills-report-tab" data-bs-toggle="pill" data-bs-target="#pills-report" type="button">📄 Звіт</button></li>
+        <li class="nav-item"><button class="nav-link" id="pills-add-tab" data-bs-toggle="pill" data-bs-target="#pills-add" type="button">➕ Товар</button></li>
     </ul>
 
     <div class="tab-content" id="pills-tabContent">
@@ -102,7 +102,7 @@
                         <th style="width: 20%;">Код</th>
                         <th style="width: 45%;">Назва товару</th>
                         <th style="width: 10%;">Од.</th>
-                        <th style="width: 15%;">Кількість</th>
+                        <th style="width: 15%;">Залишок</th>
                         <th class="btn-delete-col" style="width: 10%;">Дії</th>
                     </tr>
                 </thead>
@@ -136,7 +136,6 @@
                     <div class="col-6">
                         <label>Стандартна порція:</label>
                         <input type="number" step="0.001" id="newDefaultPortion" class="form-control" placeholder="0.4">
-                        <small class="text-muted">Для пива: 0.4 або 0.5. Для шт: 1</small>
                     </div>
                 </div>
 
@@ -157,7 +156,7 @@
   import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp } 
     from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // --- ВСТАВТЕ ВАШ КОНФІГ СЮДИ ---
+  // --- ВСТАВТЕ ВАШ КОНФІГ НИЖЧЕ ---
   const firebaseConfig = {
   apiKey: "AIzaSyDj5NydpupL2OXv3-_W7r7wpR0tbWblyI0",
   authDomain: "barmen-c0060.firebaseapp.com",
@@ -174,14 +173,21 @@
 
   let allProducts = [];
 
-  // --- СЛУХАЄМО БАЗУ ДАНИХ ---
+  // 1. Допоміжна функція для відображення чисел (Оголошена ТУТ, щоб точно працювала)
+  function formatQty(num, unit) {
+      const val = Number(num);
+      if (isNaN(val)) return "0";
+      if (unit === 'л') return val.toFixed(3);
+      return Math.floor(val);
+  }
+
+  // 2. Слухаємо базу даних
   onSnapshot(productsCol, (snapshot) => {
       allProducts = [];
       const selectSale = document.getElementById('saleProduct');
       const selectSupply = document.getElementById('supplyProduct');
       const reportBody = document.getElementById('reportBody');
       
-      // Зберігаємо поточний вибір, щоб не збивався при оновленні
       const currentSaleVal = selectSale.value;
 
       selectSale.innerHTML = '<option value="">-- Оберіть товар --</option>';
@@ -193,16 +199,17 @@
           const product = { id: docSnap.id, ...data };
           allProducts.push(product);
 
+          // Обробка безпечного значення кількості
+          const safeQty = (data.quantity !== undefined) ? data.quantity : 0;
+
           // Додаємо в селекти
-          const label = `${data.name} (Зал: ${formatQty(data.quantity, data.unit)})`;
+          const label = `${data.name} (Зал: ${formatQty(safeQty, data.unit)})`;
           const opt1 = document.createElement('option');
           opt1.value = product.id;
           opt1.text = label;
-          // Зберігаємо інфо про порцію прямо в опції
           opt1.dataset.defaultPortion = data.defaultPortion || 1; 
           opt1.dataset.unit = data.unit;
 
-          // Клон для поставки
           const opt2 = opt1.cloneNode(true);
 
           selectSale.appendChild(opt1);
@@ -211,10 +218,10 @@
           // Додаємо в таблицю
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${data.code}</td>
+            <td>${data.code || '-'}</td>
             <td>${data.name}</td>
             <td>${data.unit}</td>
-            <td>${formatQty(data.quantity, data.unit)}</td>
+            <td>${formatQty(safeQty, data.unit)}</td>
             <td class="btn-delete-col text-center">
                 <button class="btn btn-sm btn-outline-danger" onclick="window.deleteProduct('${product.id}', '${data.name}')">🗑️</button>
             </td>
@@ -226,9 +233,8 @@
       sortReport();
   });
 
-  // --- ФУНКЦІЇ ---
+  // --- Функції інтерфейсу ---
 
-  // Вибір товару: підтягуємо порцію
   window.onProductSelect = (type) => {
       const select = document.getElementById(type + 'Product');
       const amountInput = document.getElementById(type + 'Amount');
@@ -238,12 +244,11 @@
           const opt = select.options[select.selectedIndex];
           unitLabel.innerText = opt.dataset.unit;
           
-          // ТІЛЬКИ для продажу автоматично ставимо кількість
           if (type === 'sale') {
              amountInput.value = opt.dataset.defaultPortion;
-             document.getElementById('saleHint').innerText = `Стандартна порція: ${opt.dataset.defaultPortion} ${opt.dataset.unit}`;
+             document.getElementById('saleHint').innerText = `Порція: ${opt.dataset.defaultPortion} ${opt.dataset.unit}`;
           } else {
-             amountInput.value = ''; // Для поставки краще порожнє
+             amountInput.value = '';
           }
       } else {
           amountInput.value = '';
@@ -251,12 +256,6 @@
       }
   };
 
-  window.formatQty = (num, unit) => {
-      if (unit === 'л') return parseFloat(num).toFixed(3);
-      return Math.floor(num);
-  }
-
-  // Транзакція
   window.handleTransaction = async (type) => {
       const prodId = document.getElementById(type + 'Product').value;
       const amountInput = document.getElementById(type + 'Amount');
@@ -264,17 +263,19 @@
       const excise = document.getElementById('exciseCode').value;
 
       if (!prodId || isNaN(amount) || amount <= 0) {
-          alert("Оберіть товар і введіть коректну кількість!");
+          alert("Оберіть товар і введіть кількість!");
           return;
       }
 
       const productRef = doc(db, 'products', prodId);
       const product = allProducts.find(p => p.id === prodId);
       
-      let newQty = product.quantity;
+      let currentQty = (product.quantity !== undefined) ? Number(product.quantity) : 0;
+      let newQty = currentQty;
+
       if (type === 'sale') {
-          if (product.quantity < amount) {
-              if(!confirm(`Увага! На залишку менше товару (${product.quantity}), ніж ви продаєте. Продовжити в мінус?`)) return;
+          if (currentQty < amount) {
+              if(!confirm(`На залишку всього ${currentQty}. Продати в мінус?`)) return;
           }
           newQty -= amount;
       } else {
@@ -283,7 +284,6 @@
 
       try {
           await updateDoc(productRef, { quantity: newQty });
-          
           await addDoc(logsCol, {
               productName: product.name,
               productCode: product.code,
@@ -293,23 +293,20 @@
               timestamp: serverTimestamp()
           });
 
-          // Скидання
           if(type === 'sale') {
-              // Для продажу повертаємо дефолтну порцію, не очищуємо повністю, щоб зручно було бити підряд
               const opt = document.getElementById('saleProduct').options[document.getElementById('saleProduct').selectedIndex];
               amountInput.value = opt.dataset.defaultPortion; 
               document.getElementById('exciseCode').value = '';
           } else {
               amountInput.value = '';
           }
-          alert("Збережено!");
+          alert("ОК!");
       } catch (e) {
           console.error(e);
           alert("Помилка: " + e.message);
       }
   };
 
-  // Додавання
   window.addNewProduct = async () => {
       const code = document.getElementById('newCode').value;
       const name = document.getElementById('newName').value;
@@ -317,17 +314,17 @@
       const defPortion = parseFloat(document.getElementById('newDefaultPortion').value);
       const qty = parseFloat(document.getElementById('newStartQty').value);
 
-      if(!code || !name || !defPortion) return alert("Заповніть всі поля, включаючи стандартну порцію!");
+      if(!code || !name || !defPortion) return alert("Заповніть всі поля!");
 
       try {
           await addDoc(productsCol, {
               code: code,
               name: name,
               unit: unit,
-              defaultPortion: defPortion, // Зберігаємо дефолтну порцію
+              defaultPortion: defPortion,
               quantity: qty || 0
           });
-          alert("Товар створено!");
+          alert("Товар додано!");
           document.getElementById('newCode').value = '';
           document.getElementById('newName').value = '';
           document.getElementById('newDefaultPortion').value = '';
@@ -336,13 +333,12 @@
       }
   };
 
-  // Видалення
   window.deleteProduct = async (id, name) => {
-      if(confirm(`Ви точно хочете видалити товар "${name}"? Це незворотно.`)) {
+      if(confirm(`Видалити "${name}"?`)) {
           try {
               await deleteDoc(doc(db, "products", id));
           } catch(e) {
-              alert("Помилка видалення: " + e.message);
+              alert("Помилка: " + e.message);
           }
       }
   };
