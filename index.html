@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bar Manager - Фонтан (Виправлено)</title>
+    <title>Bar Manager - Фонтан</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -19,7 +19,6 @@
         /* Налаштування друку */
         @media print {
             body * { visibility: hidden; }
-            /* Відкриваємо видимість для правильного ID */
             #pills-report, #pills-report * { visibility: visible; }
             #pills-report { position: absolute; left: 0; top: 0; width: 100%; display: block !important; opacity: 1 !important; }
             .print-header { display: block; }
@@ -86,7 +85,7 @@
 
         <div class="tab-pane fade" id="pills-report">
             <div class="d-flex justify-content-between no-print mb-2">
-                <h4>Залишки на складі</h4>
+                <h4>Залишки (від найбільшого)</h4>
                 <button onclick="window.print()" class="btn btn-primary">🖨️ Друкувати звіт</button>
             </div>
             
@@ -160,7 +159,7 @@
   messagingSenderId: "442747151502",
   appId: "1:442747151502:web:827cdba7d2ae0e660195df"
 };
-  // Запуск Firebase
+
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const productsCol = collection(db, 'products');
@@ -183,9 +182,8 @@
       const selectSupply = document.getElementById('supplyProduct');
       const reportBody = document.getElementById('reportBody');
       
-      const currentSaleVal = selectSale.value; // запам'ятати вибір
+      const currentSaleVal = selectSale.value;
 
-      // Очистка
       selectSale.innerHTML = '<option value="">-- Оберіть товар --</option>';
       selectSupply.innerHTML = '<option value="">-- Оберіть товар --</option>';
       reportBody.innerHTML = '';
@@ -230,14 +228,12 @@
           reportBody.appendChild(tr);
       });
 
-      // Відновлюємо вибір, якщо він був
       if(currentSaleVal) {
-          // Перевіряємо чи товар ще існує
           const exists = Array.from(selectSale.options).some(o => o.value === currentSaleVal);
           if(exists) selectSale.value = currentSaleVal;
       }
 
-      // Сортування
+      // Викликаємо сортування після завантаження
       sortReport();
   });
 
@@ -253,7 +249,6 @@
           unitLabel.innerText = opt.dataset.unit;
           
           if (type === 'sale') {
-             // Автозаповнення порції
              amountInput.value = opt.dataset.defaultPortion;
              document.getElementById('saleHint').innerText = `Порція: ${opt.dataset.defaultPortion} ${opt.dataset.unit}`;
           } else {
@@ -302,7 +297,6 @@
               timestamp: serverTimestamp()
           });
 
-          // Зручність: якщо продаж, скидаємо кількість на дефолтну
           if(type === 'sale') {
               const opt = document.getElementById('saleProduct').options[document.getElementById('saleProduct').selectedIndex];
               amountInput.value = opt.dataset.defaultPortion;
@@ -334,7 +328,6 @@
               quantity: qty || 0
           });
           alert("Товар створено!");
-          // Очистка полів
           document.getElementById('newCode').value = '';
           document.getElementById('newName').value = '';
           document.getElementById('newDefaultPortion').value = '';
@@ -354,11 +347,22 @@
       }
   };
 
+  // --- НОВА ФУНКЦІЯ СОРТУВАННЯ ---
   function sortReport() {
     const table = document.getElementById('reportTable');
     const tbody = table.querySelector('tbody');
     const rows = Array.from(tbody.rows);
-    rows.sort((a, b) => a.cells[0].innerText.localeCompare(b.cells[0].innerText));
+    
+    rows.sort((a, b) => {
+        // Отримуємо значення з 4-го стовпчика (індекс 3), бо там кількість
+        // Перетворюємо в число (parseFloat), щоб 10 було більше за 2
+        const qtyA = parseFloat(a.cells[3].innerText) || 0;
+        const qtyB = parseFloat(b.cells[3].innerText) || 0;
+        
+        // Сортуємо від БІЛЬШОГО до меншого (b - a)
+        return qtyB - qtyA;
+    });
+    
     rows.forEach(row => tbody.appendChild(row));
   }
 
