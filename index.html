@@ -16,6 +16,10 @@
         #reportTable th { text-align: left; background-color: #eee; }
         .print-header { display: none; margin-bottom: 10px; font-weight: bold; }
 
+        /* Стиль для історії */
+        .history-sale { color: #dc3545; font-weight: bold; }
+        .history-supply { color: #198754; font-weight: bold; }
+
         /* Налаштування друку */
         @media print {
             body * { visibility: hidden; }
@@ -34,6 +38,7 @@
     <ul class="nav nav-pills mb-3 justify-content-center no-print" id="pills-tab" role="tablist">
         <li class="nav-item"><button class="nav-link active" id="pills-sale-tab" data-bs-toggle="pill" data-bs-target="#pills-sale" type="button">💰 Продаж</button></li>
         <li class="nav-item"><button class="nav-link" id="pills-supply-tab" data-bs-toggle="pill" data-bs-target="#pills-supply" type="button">🚚 Поставка</button></li>
+        <li class="nav-item"><button class="nav-link" id="pills-history-tab" data-bs-toggle="pill" data-bs-target="#pills-history" type="button">📜 Історія</button></li>
         <li class="nav-item"><button class="nav-link" id="pills-report-tab" data-bs-toggle="pill" data-bs-target="#pills-report" type="button">📄 Звіт</button></li>
         <li class="nav-item"><button class="nav-link" id="pills-add-tab" data-bs-toggle="pill" data-bs-target="#pills-add" type="button">➕ Товар</button></li>
     </ul>
@@ -80,6 +85,28 @@
                     </div>
                 </div>
                 <button onclick="handleTransaction('supply')" class="btn btn-success btn-xl">ДОДАТИ НА СКЛАД</button>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="pills-history">
+            <div class="card p-3">
+                <h4>Останні 50 операцій</h4>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Час</th>
+                                <th>Дія</th>
+                                <th>Товар</th>
+                                <th>К-сть</th>
+                                <th>Акциз</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody">
+                            <tr><td colspan="5" class="text-center">Завантаження історії...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -147,7 +174,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp } 
+  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy, limit } 
     from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   // --- ВАЖЛИВО: ЗАМІНІТЬ ЦЕЙ БЛОК НА ВАШ КОНФІГ ---
@@ -175,7 +202,7 @@
       return Math.floor(val);
   }
 
-  // --- СЛУХАЄМО ДАНІ ---
+  // --- 1. СЛУХАЄМО ТОВАРИ (ДЛЯ ЗВІТУ І ВИБОРУ) ---
   onSnapshot(productsCol, (snapshot) => {
       allProducts = [];
       const selectSale = document.getElementById('saleProduct');
@@ -201,7 +228,7 @@
           const safeQty = (data.quantity !== undefined) ? data.quantity : 0;
           const displayQty = safeFormat(safeQty, data.unit);
 
-          // Додаємо в селекти
+          // Селекти
           const label = `${data.name} (Зал: ${displayQty})`;
           const opt1 = document.createElement('option');
           opt1.value = product.id;
@@ -214,7 +241,7 @@
           selectSale.appendChild(opt1);
           selectSupply.appendChild(opt2);
 
-          // Додаємо рядок в таблицю
+          // Таблиця
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${data.code || '-'}</td>
@@ -232,10 +259,43 @@
           const exists = Array.from(selectSale.options).some(o => o.value === currentSaleVal);
           if(exists) selectSale.value = currentSaleVal;
       }
-
-      // Викликаємо сортування після завантаження
       sortReport();
   });
+
+  // --- 2. СЛУХАЄМО ІСТОРІЮ (ЛОГИ) ---
+  const logsQuery = query(logsCol, orderBy("timestamp", "desc"), limit(50));
+  
+  onSnapshot(logsQuery, (snapshot) => {
+      const historyBody = document.getElementById('historyBody');
+      historyBody.innerHTML = '';
+      
+      if (snapshot.empty) {
+          historyBody.innerHTML = '<tr><td colspan="5" class="text-center">Історія порожня</td></tr>';
+          return;
+      }
+
+      snapshot.docs.forEach(docSnap => {
+          const data = docSnap.data();
+          const dateObj = data.timestamp ? data.timestamp.toDate() : new Date();
+          const dateStr = dateObj.toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+          
+          let typeLabel = '';
+          if(data.type === 'sale') typeLabel = '<span class="history-sale">Продаж</span>';
+          else if(data.type === 'supply') typeLabel = '<span class="history-supply">Поставка</span>';
+          else typeLabel = data.type;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${dateStr}</td>
+            <td>${typeLabel}</td>
+            <td>${data.productName}</td>
+            <td>${data.amount}</td>
+            <td><small>${data.exciseCode === 'N/A' || !data.exciseCode ? '-' : data.exciseCode}</small></td>
+          `;
+          historyBody.appendChild(tr);
+      });
+  });
+
 
   // --- ЛОГІКА ІНТЕРФЕЙСУ ---
 
@@ -347,19 +407,14 @@
       }
   };
 
-  // --- НОВА ФУНКЦІЯ СОРТУВАННЯ ---
   function sortReport() {
     const table = document.getElementById('reportTable');
     const tbody = table.querySelector('tbody');
     const rows = Array.from(tbody.rows);
     
     rows.sort((a, b) => {
-        // Отримуємо значення з 4-го стовпчика (індекс 3), бо там кількість
-        // Перетворюємо в число (parseFloat), щоб 10 було більше за 2
         const qtyA = parseFloat(a.cells[3].innerText) || 0;
         const qtyB = parseFloat(b.cells[3].innerText) || 0;
-        
-        // Сортуємо від БІЛЬШОГО до меншого (b - a)
         return qtyB - qtyA;
     });
     
