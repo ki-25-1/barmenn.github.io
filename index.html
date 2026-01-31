@@ -178,13 +178,13 @@
 
   // --- ВАЖЛИВО: ЗАМІНІТЬ ЦЕЙ БЛОК НА ВАШ КОНФІГ ---
   const firebaseConfig = {
-  apiKey: "AIzaSyC7B4x-ttIJLNz0bQu_uyWkqJGtCGZQfIU",
-  authDomain: "barmenn-app.firebaseapp.com",
-  projectId: "barmenn-app",
-  storageBucket: "barmenn-app.firebasestorage.app",
-  messagingSenderId: "493378647415",
-  appId: "1:493378647415:web:f8a30f3f473a8e7d131d72"
-};
+    apiKey: "AIzaSyC7B4x-ttIJLNz0bQu_uyWkqJGtCGZQfIU",
+    authDomain: "barmenn-app.firebaseapp.com",
+    projectId: "barmenn-app",
+    storageBucket: "barmenn-app.firebasestorage.app",
+    messagingSenderId: "493378647415",
+    appId: "1:493378647415:web:f8a30f3f473a8e7d131d72"
+  };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -228,7 +228,9 @@
           const displayQty = safeFormat(safeQty, data.unit);
 
           // Селекти
-          const label = ${data.name} (Зал: ${displayQty});
+          // ВИПРАВЛЕНО: Додано зворотні лапки
+          const label = `${data.name} (Зал: ${displayQty})`;
+          
           const opt1 = document.createElement('option');
           opt1.value = product.id;
           opt1.text = label;
@@ -241,8 +243,9 @@
           selectSupply.appendChild(opt2);
 
           // Таблиця
+          // ВИПРАВЛЕНО: Додано зворотні лапки
           const tr = document.createElement('tr');
-          tr.innerHTML = 
+          tr.innerHTML = `
             <td>${data.code || '-'}</td>
             <td>${data.name}</td>
             <td>${data.unit}</td>
@@ -250,7 +253,7 @@
             <td class="btn-delete-col text-center">
                 <button class="btn btn-sm btn-outline-danger" onclick="window.deleteProduct('${product.id}', '${data.name}')">🗑️</button>
             </td>
-          ;
+          `;
           reportBody.appendChild(tr);
       });
 
@@ -260,7 +263,8 @@
       }
       sortReport();
   });
-// --- 2. СЛУХАЄМО ІСТОРІЮ (ЛОГИ) ---
+
+  // --- 2. СЛУХАЄМО ІСТОРІЮ (ЛОГИ) ---
   const logsQuery = query(logsCol, orderBy("timestamp", "desc"), limit(50));
   
   onSnapshot(logsQuery, (snapshot) => {
@@ -282,14 +286,15 @@
           else if(data.type === 'supply') typeLabel = '<span class="history-supply">Поставка</span>';
           else typeLabel = data.type;
 
+          // ВИПРАВЛЕНО: Додано зворотні лапки
           const tr = document.createElement('tr');
-          tr.innerHTML = 
+          tr.innerHTML = `
             <td>${dateStr}</td>
             <td>${typeLabel}</td>
             <td>${data.productName}</td>
             <td>${data.amount}</td>
             <td><small>${data.exciseCode === 'N/A' || !data.exciseCode ? '-' : data.exciseCode}</small></td>
-          ;
+          `;
           historyBody.appendChild(tr);
       });
   });
@@ -308,7 +313,8 @@
           
           if (type === 'sale') {
              amountInput.value = opt.dataset.defaultPortion;
-             document.getElementById('saleHint').innerText = Порція: ${opt.dataset.defaultPortion} ${opt.dataset.unit};
+             // ВИПРАВЛЕНО: Додано зворотні лапки
+             document.getElementById('saleHint').innerText = `Порція: ${opt.dataset.defaultPortion} ${opt.dataset.unit}`;
           } else {
              amountInput.value = '';
           }
@@ -324,7 +330,8 @@
       const amount = parseFloat(amountInput.value);
       const excise = document.getElementById('exciseCode').value;
 
-      if (!prodId  isNaN(amount)  amount <= 0) {
+      // ВИПРАВЛЕНО: Додано оператори ||
+      if (!prodId || isNaN(amount) || amount <= 0) {
           alert("Помилка: перевірте товар та кількість");
           return;
       }
@@ -337,7 +344,8 @@
 
       if (type === 'sale') {
           if (currentQty < amount) {
-              if(!confirm(На залишку всього ${currentQty}. Усе одно продати в мінус?)) return;
+              // ВИПРАВЛЕНО: Додано зворотні лапки
+              if(!confirm(`На залишку всього ${currentQty}. Усе одно продати в мінус?`)) return;
           }
           newQty -= amount;
       } else {
@@ -367,14 +375,16 @@
           alert("Помилка збереження: " + e.message);
       }
   };
-window.addNewProduct = async () => {
+
+  window.addNewProduct = async () => {
       const code = document.getElementById('newCode').value;
       const name = document.getElementById('newName').value;
       const unit = document.getElementById('newUnit').value;
       const defPortion = parseFloat(document.getElementById('newDefaultPortion').value);
       const qty = parseFloat(document.getElementById('newStartQty').value);
 
-      if(!code  !name  isNaN(defPortion)) return alert("Заповніть назву, код і стандартну порцію!");
+      // ВИПРАВЛЕНО: Додано оператори ||
+      if(!code || !name || isNaN(defPortion)) return alert("Заповніть назву, код і стандартну порцію!");
 
       try {
           await addDoc(productsCol, {
@@ -395,7 +405,8 @@ window.addNewProduct = async () => {
   };
 
   window.deleteProduct = async (id, name) => {
-      if(confirm(Видалити товар "${name}"?)) {
+      // ВИПРАВЛЕНО: Додано зворотні лапки
+      if(confirm(`Видалити товар "${name}"?`)) {
           try {
               await deleteDoc(doc(db, "products", id));
           } catch(e) {
