@@ -29,12 +29,24 @@
         .print-header { display: none; }
 
         @media print {
-            body * { visibility: hidden; }
-            #pills-report, #pills-report * { visibility: visible; }
-            #pills-report { position: absolute; left: 0; top: 0; width: 100%; }
-            .no-print { display: none !important; }
-            .print-header { display: block; margin-bottom: 20px; font-weight: bold; font-size: 20px; }
-        }
+    body * { visibility: hidden; }
+    #pills-report, #pills-report * { visibility: visible; }
+    #pills-report { position: absolute; left: 0; top: 0; width: 100%; }
+    .no-print { display: none !important; }
+    
+    /* Новий стиль заголовка */
+    .print-header { 
+        display: flex !important; /* Робимо блок гнучким */
+        justify-content: space-between; /* Назва вліво, дата вправо */
+        align-items: center;
+        border-bottom: 2px solid #000;
+        margin-bottom: 15px;
+        padding-bottom: 5px;
+        font-family: 'Courier New', monospace;
+        font-size: 18px;
+        font-weight: bold;
+    }
+}
     </style>
 </head>
 <body>
@@ -116,7 +128,10 @@
                 <h4>Залишки на складі</h4>
                 <button onclick="window.print()" class="btn btn-primary">🖨️ Друкувати звіт</button>
             </div>
-            <div class="print-header">фонтан" | <span id="reportDate"></span></div>
+            <div class="print-header">
+                <span>фонтан</span>
+                <span id="reportDate"></span>
+            </div>
             <table id="reportTable">
                 <thead>
                     <tr><th>Код</th><th>Назва товару</th><th>Од.</th><th>Залишок</th><th class="no-print">Дії</th></tr>
