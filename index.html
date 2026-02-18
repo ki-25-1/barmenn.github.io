@@ -6,27 +6,34 @@
     <title>Bar Manager - Фонтан</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none; }
-        .btn-xl { padding: 15px 20px; font-size: 1.2rem; width: 100%; margin-bottom: 10px; }
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+        .card { margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none; border-radius: 12px; }
+        .btn-xl { padding: 18px; font-size: 1.3rem; width: 100%; font-weight: bold; border-radius: 10px; }
         
-        /* Стилі таблиці звіту */
-        #reportTable { width: 100%; border-collapse: collapse; background: white; font-family: 'Courier New', Courier, monospace; font-size: 14px; color: black; }
-        #reportTable th, #reportTable td { border: 2px solid #000; padding: 4px 8px; }
-        #reportTable th { text-align: left; background-color: #eee; }
-        .print-header { display: none; margin-bottom: 10px; font-weight: bold; }
+        /* Стиль для живого пошуку */
+        .search-box { 
+            border: 2px solid #0d6efd; 
+            border-radius: 8px; 
+            padding: 12px; 
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
 
-        /* Стиль для історії */
+        /* Стилі звіту для друку */
+        #reportTable { width: 100%; border-collapse: collapse; background: white; font-family: 'Courier New', monospace; font-size: 14px; }
+        #reportTable th, #reportTable td { border: 1px solid #000; padding: 6px; }
+        #reportTable th { background-color: #f0f0f0; text-align: left; }
+        
         .history-sale { color: #dc3545; font-weight: bold; }
         .history-supply { color: #198754; font-weight: bold; }
+        .print-header { display: none; }
 
-        /* Налаштування друку */
         @media print {
             body * { visibility: hidden; }
             #pills-report, #pills-report * { visibility: visible; }
-            #pills-report { position: absolute; left: 0; top: 0; width: 100%; display: block !important; opacity: 1 !important; }
-            .print-header { display: block; }
-            .no-print, .btn-delete-col { display: none !important; }
+            #pills-report { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+            .print-header { display: block; margin-bottom: 20px; font-weight: bold; font-size: 20px; }
         }
     </style>
 </head>
@@ -36,54 +43,57 @@
     <h2 class="text-center mb-4">🍺 Bar Manager: Фонтан</h2>
 
     <ul class="nav nav-pills mb-3 justify-content-center no-print" id="pills-tab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" id="pills-sale-tab" data-bs-toggle="pill" data-bs-target="#pills-sale" type="button">💰 Продаж</button></li>
-        <li class="nav-item"><button class="nav-link" id="pills-supply-tab" data-bs-toggle="pill" data-bs-target="#pills-supply" type="button">🚚 Поставка</button></li>
-        <li class="nav-item"><button class="nav-link" id="pills-history-tab" data-bs-toggle="pill" data-bs-target="#pills-history" type="button">📜 Історія</button></li>
-        <li class="nav-item"><button class="nav-link" id="pills-report-tab" data-bs-toggle="pill" data-bs-target="#pills-report" type="button">📄 Звіт</button></li>
-        <li class="nav-item"><button class="nav-link" id="pills-add-tab" data-bs-toggle="pill" data-bs-target="#pills-add" type="button">➕ Товар</button></li>
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pills-sale">💰 Продаж</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-supply">🚚 Поставка</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-history">📜 Історія</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-report">📄 Звіт</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-add">➕ Товар</button></li>
     </ul>
 
     <div class="tab-content" id="pills-tabContent">
         
         <div class="tab-pane fade show active" id="pills-sale">
             <div class="card p-4">
-                <h4>Провести продаж</h4>
+                <h4>Швидкий продаж</h4>
                 <div class="mb-3">
-                    <label>Оберіть товар:</label>
-                    <select id="saleProduct" class="form-select" onchange="onProductSelect('sale')"></select>
+                    <label class="form-label">🔍 Пошук товару:</label>
+                    <input list="productsList" id="saleSearch" class="form-control search-box" placeholder="Введіть назву або код..." oninput="handleSearch('sale')">
+                    <input type="hidden" id="saleProductId">
+                    <small id="saleHint" class="text-primary fw-bold"></small>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label>Кількість / Об'єм:</label>
+                        <label>Кількість:</label>
                         <div class="input-group">
-                            <input type="number" step="0.001" id="saleAmount" class="form-control">
-                            <span class="input-group-text" id="saleUnitLabel">од</span>
+                            <input type="number" step="0.001" id="saleAmount" class="form-control form-control-lg">
+                            <span class="input-group-text" id="saleUnit">од</span>
                         </div>
-                        <small class="text-muted" id="saleHint">Спочатку оберіть товар</small>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label>Акциз (якщо є):</label>
-                        <input type="text" id="exciseCode" class="form-control" placeholder="Сканувати...">
+                        <label>Акцизний код:</label>
+                        <input type="text" id="exciseCode" class="form-control form-control-lg" placeholder="Сканувати...">
                     </div>
                 </div>
-                <button onclick="handleTransaction('sale')" class="btn btn-danger btn-xl">ПРОДАТИ</button>
+                <button onclick="processTransaction('sale')" class="btn btn-danger btn-xl">ПРОДАТИ</button>
             </div>
         </div>
-<div class="tab-pane fade" id="pills-supply">
+
+        <div class="tab-pane fade" id="pills-supply">
             <div class="card p-4">
-                <h4>Прийняти товар</h4>
+                <h4>Прийом товару на склад</h4>
                 <div class="mb-3">
-                    <label>Оберіть товар:</label>
-                    <select id="supplyProduct" class="form-select" onchange="onProductSelect('supply')"></select>
+                    <label class="form-label">🔍 Оберіть товар:</label>
+                    <input list="productsList" id="supplySearch" class="form-control search-box" placeholder="Шукати за назвою..." oninput="handleSearch('supply')">
+                    <input type="hidden" id="supplyProductId">
                 </div>
                 <div class="mb-3">
-                    <label>Кількість, що приїхала:</label>
+                    <label>Кількість поставки:</label>
                     <div class="input-group">
-                        <input type="number" step="0.001" id="supplyAmount" class="form-control">
-                        <span class="input-group-text" id="supplyUnitLabel">од</span>
+                        <input type="number" step="0.001" id="supplyAmount" class="form-control form-control-lg">
+                        <span class="input-group-text" id="supplyUnit">од</span>
                     </div>
                 </div>
-                <button onclick="handleTransaction('supply')" class="btn btn-success btn-xl">ДОДАТИ НА СКЛАД</button>
+                <button onclick="processTransaction('supply')" class="btn btn-success btn-xl">ДОДАТИ НА СКЛАД</button>
             </div>
         </div>
 
@@ -91,356 +101,218 @@
             <div class="card p-3">
                 <h4>Останні 50 операцій</h4>
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Час</th>
-                                <th>Дія</th>
-                                <th>Товар</th>
-                                <th>К-сть</th>
-                                <th>Акциз</th>
-                            </tr>
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr><th>Час</th><th>Дія</th><th>Товар</th><th>К-сть</th><th>Акциз</th></tr>
                         </thead>
-                        <tbody id="historyBody">
-                            <tr><td colspan="5" class="text-center">Завантаження історії...</td></tr>
-                        </tbody>
+                        <tbody id="historyBody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
         <div class="tab-pane fade" id="pills-report">
-            <div class="d-flex justify-content-between no-print mb-2">
-                <h4>Залишки (від найбільшого)</h4>
+            <div class="d-flex justify-content-between mb-3 no-print">
+                <h4>Залишки на складі</h4>
                 <button onclick="window.print()" class="btn btn-primary">🖨️ Друкувати звіт</button>
             </div>
-            
-            <div class="print-header">
-                <span>фонтан</span>
-                <span style="float: right;" id="reportDate"></span>
-            </div>
-
+            <div class="print-header">Звіт по залишках: Бар "Фонтан" | <span id="reportDate"></span></div>
             <table id="reportTable">
                 <thead>
-                    <tr>
-                        <th style="width: 20%;">Код</th>
-                        <th style="width: 45%;">Назва товару</th>
-                        <th style="width: 10%;">Од.</th>
-                        <th style="width: 15%;">Залишок</th>
-                        <th class="btn-delete-col" style="width: 10%;">Дії</th>
-                    </tr>
+                    <tr><th>Код</th><th>Назва товару</th><th>Од.</th><th>Залишок</th><th class="no-print">Дії</th></tr>
                 </thead>
-                <tbody id="reportBody">
-                    <tr><td colspan="5" class="text-center">Завантаження даних...</td></tr>
-                </tbody>
+                <tbody id="reportBody"></tbody>
             </table>
         </div>
 
         <div class="tab-pane fade" id="pills-add">
             <div class="card p-4">
-                <h4>Створити картку товару</h4>
-                <div class="mb-2">
-                    <label>Штрихкод / Код:</label>
-                    <input type="text" id="newCode" class="form-control" placeholder="2204218200">
-                </div>
-                <div class="mb-2">
-                    <label>Назва товару:</label>
-                    <input type="text" id="newName" class="form-control" placeholder="Назва товару">
+                <h4>Нова картка товару</h4>
+                <div class="row">
+                    <div class="col-md-6 mb-2"><label>Код:</label><input type="text" id="newCode" class="form-control"></div>
+                    <div class="col-md-6 mb-2"><label>Назва:</label><input type="text" id="newName" class="form-control"></div>
                 </div>
                 <div class="row mb-2">
                     <div class="col-6">
-                        <label>Одиниця виміру:</label>
-                        <select id="newUnit" class="form-select">
-                            <option value="л">Літри (л)</option>
-                            <option value="шт">Штуки (шт)</option>
-                        </select>
-</div>
+                        <label>Одиниця:</label>
+                        <select id="newUnit" class="form-select"><option value="л">Літри</option><option value="шт">Штуки</option></select>
+                    </div>
                     <div class="col-6">
                         <label>Станд. порція:</label>
-                        <input type="number" step="0.001" id="newDefaultPortion" class="form-control" placeholder="0.4">
+                        <input type="number" step="0.001" id="newDefaultPortion" class="form-control" value="0.5">
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label>Початковий залишок:</label>
-                    <input type="number" step="0.001" id="newStartQty" class="form-control" value="0">
-                </div>
-                <button onclick="addNewProduct()" class="btn btn-dark w-100">Зберегти товар</button>
+                <div class="mb-3"><label>Початковий залишок:</label><input type="number" step="0.001" id="newStartQty" class="form-control" value="0"></div>
+                <button onclick="addNewProduct()" class="btn btn-dark w-100 py-3">ЗБЕРЕГТИ ТОВАР</button>
             </div>
         </div>
 
     </div>
 </div>
 
+<datalist id="productsList"></datalist>
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy, limit } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy, limit } 
+        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // --- ВАЖЛИВО: ЗАМІНІТЬ ЦЕЙ БЛОК НА ВАШ КОНФІГ ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyC7B4x-ttIJLNz0bQu_uyWkqJGtCGZQfIU",
-    authDomain: "barmenn-app.firebaseapp.com",
-    projectId: "barmenn-app",
-    storageBucket: "barmenn-app.firebasestorage.app",
-    messagingSenderId: "493378647415",
-    appId: "1:493378647415:web:f8a30f3f473a8e7d131d72"
-  };
+    // --- КЛЮЧІ FIREBASE ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyC7B4x"+"-ttIJLNz0bQu_"+"uyWkqJGtCGZQfIU",
+        authDomain: "barmenn-app.firebaseapp.com",
+        projectId: "barmenn-app",
+        storageBucket: "barmenn-app.firebasestorage.app",
+        messagingSenderId: "493378647415",
+        appId: "1:493378"+"647415:web:f8a30f3"+"f473a8e7d131d72"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const productsCol = collection(db, 'products');
-  const logsCol = collection(db, 'logs');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const productsCol = collection(db, 'products');
+    const logsCol = collection(db, 'logs');
 
-  let allProducts = [];
+    let allProducts = [];
 
-  // Допоміжна функція форматування (безпечна)
-  function safeFormat(num, unit) {
-      const val = Number(num);
-      if (isNaN(val)) return "0";
-      if (unit === 'л') return val.toFixed(3);
-      return Math.floor(val);
-  }
+    // Допоміжна функція форматування
+    const formatQty = (num, unit) => (unit === 'л' ? parseFloat(num).toFixed(3) : Math.floor(num));
 
-  // --- 1. СЛУХАЄМО ТОВАРИ (ДЛЯ ЗВІТУ І ВИБОРУ) ---
-  onSnapshot(productsCol, (snapshot) => {
-      allProducts = [];
-      const selectSale = document.getElementById('saleProduct');
-      const selectSupply = document.getElementById('supplyProduct');
-      const reportBody = document.getElementById('reportBody');
-      
-      const currentSaleVal = selectSale.value;
-
-      selectSale.innerHTML = '<option value="">-- Оберіть товар --</option>';
-      selectSupply.innerHTML = '<option value="">-- Оберіть товар --</option>';
-      reportBody.innerHTML = '';
-
-      if (snapshot.empty) {
-          reportBody.innerHTML = '<tr><td colspan="5" class="text-center">Немає товарів. Додайте перший товар!</td></tr>';
-          return;
-      }
-
-      snapshot.docs.forEach(docSnap => {
-          const data = docSnap.data();
-          const product = { id: docSnap.id, ...data };
-          allProducts.push(product);
-
-          const safeQty = (data.quantity !== undefined) ? data.quantity : 0;
-          const displayQty = safeFormat(safeQty, data.unit);
-
-          // Селекти
-          // ВИПРАВЛЕНО: Додано зворотні лапки
-          const label = `${data.name} (Зал: ${displayQty})`;
-          
-          const opt1 = document.createElement('option');
-          opt1.value = product.id;
-          opt1.text = label;
-          opt1.dataset.defaultPortion = data.defaultPortion || 1; 
-          opt1.dataset.unit = data.unit;
-
-          const opt2 = opt1.cloneNode(true);
-
-          selectSale.appendChild(opt1);
-          selectSupply.appendChild(opt2);
-
-          // Таблиця
-          // ВИПРАВЛЕНО: Додано зворотні лапки
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${data.code || '-'}</td>
-            <td>${data.name}</td>
-            <td>${data.unit}</td>
-            <td>${displayQty}</td>
-            <td class="btn-delete-col text-center">
-                <button class="btn btn-sm btn-outline-danger" onclick="window.deleteProduct('${product.id}', '${data.name}')">🗑️</button>
-            </td>
-          `;
-          reportBody.appendChild(tr);
-      });
-
-      if(currentSaleVal) {
-          const exists = Array.from(selectSale.options).some(o => o.value === currentSaleVal);
-          if(exists) selectSale.value = currentSaleVal;
-      }
-      sortReport();
-  });
-
-  // --- 2. СЛУХАЄМО ІСТОРІЮ (ЛОГИ) ---
-  const logsQuery = query(logsCol, orderBy("timestamp", "desc"), limit(50));
-  
-  onSnapshot(logsQuery, (snapshot) => {
-      const historyBody = document.getElementById('historyBody');
-      historyBody.innerHTML = '';
-      
-      if (snapshot.empty) {
-          historyBody.innerHTML = '<tr><td colspan="5" class="text-center">Історія порожня</td></tr>';
-          return;
-      }
-
-      snapshot.docs.forEach(docSnap => {
-          const data = docSnap.data();
-          const dateObj = data.timestamp ? data.timestamp.toDate() : new Date();
-          const dateStr = dateObj.toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
-          
-          let typeLabel = '';
-          if(data.type === 'sale') typeLabel = '<span class="history-sale">Продаж</span>';
-          else if(data.type === 'supply') typeLabel = '<span class="history-supply">Поставка</span>';
-          else typeLabel = data.type;
-
-          // ВИПРАВЛЕНО: Додано зворотні лапки
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${dateStr}</td>
-            <td>${typeLabel}</td>
-            <td>${data.productName}</td>
-            <td>${data.amount}</td>
-            <td><small>${data.exciseCode === 'N/A' || !data.exciseCode ? '-' : data.exciseCode}</small></td>
-          `;
-          historyBody.appendChild(tr);
-      });
-  });
-
-
-  // --- ЛОГІКА ІНТЕРФЕЙСУ ---
-
-  window.onProductSelect = (type) => {
-      const select = document.getElementById(type + 'Product');
-      const amountInput = document.getElementById(type + 'Amount');
-      const unitLabel = document.getElementById(type + 'UnitLabel');
-
-      if (select.selectedIndex > 0) {
-          const opt = select.options[select.selectedIndex];
-          unitLabel.innerText = opt.dataset.unit;
-          
-          if (type === 'sale') {
-             amountInput.value = opt.dataset.defaultPortion;
-             // ВИПРАВЛЕНО: Додано зворотні лапки
-             document.getElementById('saleHint').innerText = `Порція: ${opt.dataset.defaultPortion} ${opt.dataset.unit}`;
-          } else {
-             amountInput.value = '';
-          }
-      } else {
-          amountInput.value = '';
-          unitLabel.innerText = 'од';
-      }
-  };
-
-  window.handleTransaction = async (type) => {
-      const prodId = document.getElementById(type + 'Product').value;
-      const amountInput = document.getElementById(type + 'Amount');
-      const amount = parseFloat(amountInput.value);
-      const excise = document.getElementById('exciseCode').value;
-
-      // ВИПРАВЛЕНО: Додано оператори ||
-      if (!prodId || isNaN(amount) || amount <= 0) {
-          alert("Помилка: перевірте товар та кількість");
-          return;
-      }
-
-      const productRef = doc(db, 'products', prodId);
-      const product = allProducts.find(p => p.id === prodId);
-      
-      let currentQty = (product.quantity !== undefined) ? Number(product.quantity) : 0;
-      let newQty = currentQty;
-
-      if (type === 'sale') {
-          if (currentQty < amount) {
-              // ВИПРАВЛЕНО: Додано зворотні лапки
-              if(!confirm(`На залишку всього ${currentQty}. Усе одно продати в мінус?`)) return;
-          }
-          newQty -= amount;
-      } else {
-          newQty += amount;
-      }
-
-      try {
-          await updateDoc(productRef, { quantity: newQty });
-          await addDoc(logsCol, {
-              productName: product.name,
-              productCode: product.code,
-              type: type,
-              amount: amount,
-              exciseCode: excise || "N/A",
-              timestamp: serverTimestamp()
-          });
-
-          if(type === 'sale') {
-              const opt = document.getElementById('saleProduct').options[document.getElementById('saleProduct').selectedIndex];
-              amountInput.value = opt.dataset.defaultPortion;
-              document.getElementById('exciseCode').value = '';
-          } else {
-              amountInput.value = '';
-          }
-          alert("Збережено!");
-      } catch (e) {
-          alert("Помилка збереження: " + e.message);
-      }
-  };
-
-  window.addNewProduct = async () => {
-      const code = document.getElementById('newCode').value;
-      const name = document.getElementById('newName').value;
-      const unit = document.getElementById('newUnit').value;
-      const defPortion = parseFloat(document.getElementById('newDefaultPortion').value);
-      const qty = parseFloat(document.getElementById('newStartQty').value);
-
-      // ВИПРАВЛЕНО: Додано оператори ||
-      if(!code || !name || isNaN(defPortion)) return alert("Заповніть назву, код і стандартну порцію!");
-
-      try {
-          await addDoc(productsCol, {
-              code: code,
-              name: name,
-              unit: unit,
-              defaultPortion: defPortion,
-              quantity: qty || 0
-          });
-          alert("Товар створено!");
-          document.getElementById('newCode').value = '';
-          document.getElementById('newName').value = '';
-          document.getElementById('newDefaultPortion').value = '';
-          document.getElementById('newStartQty').value = '0';
-      } catch (e) {
-          alert("Помилка: " + e.message);
-      }
-  };
-
-  window.deleteProduct = async (id, name) => {
-      // 1. Запитуємо Пін-код
-      const pin = prompt("Введіть код доступу для видалення:");
-
-      // 2. Перевіряємо (тут можна поставити будь-які цифри, наприклад "1111")
-      if (pin !== "4748") {
-          alert("⛔ Неправильний пін! Видалення скасовано.");
-          return; // Зупиняємо функцію, нічого не видаляється
-      }
-
-      // 3. Якщо код правильний — питаємо підтвердження і видаляємо
-      if(confirm(`Ви точно хочете видалити товар "${name}"?`)) {
-          try {
-              await deleteDoc(doc(db, "products", id));
-              // (Можна не виводити alert, бо товар зникне з таблиці сам)
-          } catch(e) {
-              alert("Не вдалося видалити: " + e.message);
-          }
-      }
-  };
-
-  function sortReport() {
-    const table = document.getElementById('reportTable');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.rows);
-    
-    rows.sort((a, b) => {
-        const qtyA = parseFloat(a.cells[3].innerText) || 0;
-        const qtyB = parseFloat(b.cells[3].innerText) || 0;
-        return qtyB - qtyA;
+    // 1. СЛУХАЄМО БАЗУ ТОВАРІВ
+    onSnapshot(productsCol, (snapshot) => {
+        allProducts = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateInterface();
     });
-    
-    rows.forEach(row => tbody.appendChild(row));
-  }
 
-  const date = new Date();
-  document.getElementById('reportDate').innerText = date.toLocaleDateString('uk-UA');
+    function updateInterface() {
+        const datalist = document.getElementById('productsList');
+        const reportBody = document.getElementById('reportBody');
+        
+        datalist.innerHTML = '';
+        reportBody.innerHTML = '';
+
+        // Сортуємо для звіту за кількістю (від більшого)
+        const sortedProducts = [...allProducts].sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+
+        sortedProducts.forEach(p => {
+            // Додаємо в список підказок для пошуку
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.label = `Код: ${p.code || '-'} | Зал: ${formatQty(p.quantity, p.unit)}`;
+            datalist.appendChild(opt);
+
+            // Додаємо в таблицю звіту
+            reportBody.innerHTML += `
+                <tr>
+                    <td>${p.code || '-'}</td>
+                    <td>${p.name}</td>
+                    <td>${p.unit}</td>
+                    <td><b>${formatQty(p.quantity, p.unit)}</b></td>
+                    <td class="no-print text-center">
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️</button>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    // 2. ЖИВИЙ ПОШУК ТА АВТОВИБІР
+    window.handleSearch = (type) => {
+        const input = document.getElementById(type + 'Search');
+        const hiddenId = document.getElementById(type + 'ProductId');
+        const unitLabel = document.getElementById(type + 'Unit');
+        const amountInput = document.getElementById(type + 'Amount');
+        const hint = document.getElementById('saleHint');
+
+        const product = allProducts.find(p => p.name === input.value);
+
+        if (product) {
+            hiddenId.value = product.id;
+            unitLabel.innerText = product.unit;
+            if (type === 'sale') {
+                amountInput.value = product.defaultPortion;
+                hint.innerText = `Залишок: ${formatQty(product.quantity, product.unit)} ${product.unit}`;
+            }
+        } else {
+            hiddenId.value = "";
+            if (type === 'sale') hint.innerText = "";
+        }
+    };
+
+    // 3. ПРОВЕДЕННЯ ОПЕРАЦІЇ (ПРОДАЖ / ПОСТАВКА)
+    window.processTransaction = async (type) => {
+        const id = document.getElementById(type + 'ProductId').value;
+        const amount = parseFloat(document.getElementById(type + 'Amount').value);
+        const excise = document.getElementById('exciseCode')?.value || "";
+
+        if (!id || isNaN(amount) || amount <= 0) return alert("Спочатку оберіть товар зі списку!");
+
+        const product = allProducts.find(p => p.id === id);
+        let newQty = (product.quantity || 0) + (type === 'sale' ? -amount : amount);
+
+        if (type === 'sale' && product.quantity < amount) {
+            if (!confirm("Недостатньо залишку. Продати в мінус?")) return;
+        }
+
+        try {
+            await updateDoc(doc(db, 'products', id), { quantity: newQty });
+            await addDoc(logsCol, {
+                productName: product.name,
+                type: type,
+                amount: amount,
+                exciseCode: excise || "N/A",
+                timestamp: serverTimestamp()
+            });
+
+            // Очищення полів
+            document.getElementById(type + 'Search').value = "";
+            document.getElementById(type + 'Amount').value = "";
+            if (type === 'sale') document.getElementById('exciseCode').value = "";
+            alert("✅ Успішно!");
+        } catch (e) { alert("Помилка: " + e.message); }
+    };
+
+    // 4. ІСТОРІЯ (ЛОГИ)
+    onSnapshot(query(logsCol, orderBy("timestamp", "desc"), limit(50)), (snap) => {
+        const hb = document.getElementById('historyBody');
+        hb.innerHTML = '';
+        snap.forEach(d => {
+            const data = d.data();
+            const date = data.timestamp ? data.timestamp.toDate().toLocaleString('uk-UA', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '...';
+            hb.innerHTML += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${data.type === 'sale' ? '<span class="history-sale">Продаж</span>' : '<span class="history-supply">Поставка</span>'}</td>
+                    <td>${data.productName}</td>
+                    <td>${data.amount}</td>
+                    <td><small>${data.exciseCode}</small></td>
+                </tr>`;
+        });
+    });
+
+    // 5. ДОДАВАННЯ НОВОГО ТОВАРУ
+    window.addNewProduct = async () => {
+        const name = document.getElementById('newName').value;
+        const code = document.getElementById('newCode').value;
+        const unit = document.getElementById('newUnit').value;
+        const portion = parseFloat(document.getElementById('newDefaultPortion').value);
+        const startQty = parseFloat(document.getElementById('newStartQty').value);
+
+        if (!name || isNaN(portion)) return alert("Заповніть назву та порцію!");
+
+        await addDoc(productsCol, { name, code, unit, defaultPortion: portion, quantity: startQty || 0 });
+        alert("Товар додано!");
+        document.querySelectorAll('#pills-add input').forEach(i => i.value = (i.id === 'newStartQty' ? "0" : ""));
+    };
+
+    // 6. ВИДАЛЕННЯ
+    window.deleteProduct = async (id, name) => {
+        if (prompt("Введіть пароль для видалення:") === "4748") {
+            if (confirm(`Видалити товар "${name}"?`)) {
+                await deleteDoc(doc(db, "products", id));
+            }
+        } else { alert("Невірний пароль!"); }
+    };
+
+    document.getElementById('reportDate').innerText = new Date().toLocaleDateString('uk-UA');
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
